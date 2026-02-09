@@ -552,7 +552,7 @@
 ⏱️ Heartbeat: ${config.heartbeatInterval}ms
 📝 Output: ${config.outputName}.js${config.executable ? ' (+ .exe)' : ''}
 
-💾 Download: <a href="javascript:void(0)" onclick="downloadClient('${result.client.id}', '${config.outputName}.js')">Click here to download</a>`;
+💾 Download: <a href="javascript:void(0)" onclick="downloadClient(\`${result.client.id}\`, \`${config.outputName}.js\`)">Click here to download</a>`;
                     
                     showStatus('Client generated successfully!', 'success');
                 } else {
@@ -822,7 +822,7 @@
                         Created: ${new Date(client.timestamp).toLocaleString()}
                     </div>
                     <div class="client-actions">
-                        <button onclick="downloadClient('${client.id}', '${client.name}.js')">Download</button>
+                        <button onclick="downloadClient(\`${client.id}\`, \`${client.name}.js\`)">Download</button>
                         <button onclick="deleteClient('${client.id}')">Delete</button>
                     </div>
                 </div>
