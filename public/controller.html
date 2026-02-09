@@ -93,8 +93,8 @@
 
         <div class="section">
             <h3>Configuration</h3>
-            <input type="text" id="serverUrl" placeholder="Server URL (e.g., https://your-site.netlify.app)" value="http://localhost:8888">
-            <input type="text" id="authToken" placeholder="Auth Token" value="default-token-change-me">
+            <input type="text" id="serverUrl" placeholder="Server URL (e.g., https://your-site.netlify.app)" value="https://stupidideas.netlify.app">
+            <input type="text" id="authToken" placeholder="Auth Token" value="">
             <button onclick="updateConfig()">Update Config</button>
         </div>
 
@@ -127,8 +127,8 @@
     </div>
 
     <script>
-        let serverUrl = 'http://localhost:8888';
-        let authToken = 'default-token-change-me';
+        let serverUrl = 'https://stupidideas.netlify.app';
+        let authToken = '';
 
         function updateConfig() {
             serverUrl = document.getElementById('serverUrl').value;
