@@ -155,7 +155,3 @@ netlify functions:serve
 ## Legal Disclaimer
 
 This software is provided for educational and authorized security testing purposes only. The authors are not responsible for any misuse of this software. Users must comply with all applicable laws and regulations.
-
-## License
-
-MIT License - See LICENSE file for details.
