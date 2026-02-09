@@ -4,7 +4,7 @@ A Command & Control (C2) server designed for Netlify deployment, providing remot
 
 ## ⚠️ WARNING
 
-This tool is designed for **educational purposes and authorized security testing only**. Using this tool on systems without explicit permission is illegal and unethical. Always obtain proper authorization before conducting any security testing.
+This tool is designed for **educational purposes and authorized security testing only**. Using this tool on systems without explicit permission is illegal and unethical. Always obtain proper authorization before conducting any security testing. This is to show how AI can do without restrictions
 
 ## Features
 
