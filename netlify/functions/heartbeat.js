@@ -29,6 +29,15 @@ exports.handler = async (event, context) => {
   }
 
   try {
+    // Verify authentication for both clients and controllers
+    if (!verifyAuth(event)) {
+      return {
+        statusCode: 401,
+        headers,
+        body: JSON.stringify({ error: 'Unauthorized' })
+      };
+    }
+
     const clientId = getClientId(event);
     const timestamp = Date.now();
 
