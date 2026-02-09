@@ -365,6 +365,7 @@
                 <button onclick="generateSingleClient()">🔨 Generate Client</button>
                 <button onclick="generateToken()">🔄 Generate Token</button>
                 <button onclick="previewConfig()">👁️ Preview Config</button>
+                <button id="downloadBtn" onclick="downloadLastClient()" style="display: none;">💾 Download Last Client</button>
             </div>
 
             <div id="singleOutput" class="output" style="display: none;"></div>
@@ -535,6 +536,15 @@
                 const result = await generateClientViaAPI(config);
                 
                 if (result.success) {
+                    // Store last generated client
+                    lastGeneratedClient = {
+                        id: result.client.id,
+                        filename: config.outputName + '.js'
+                    };
+                    
+                    // Show download button
+                    document.getElementById('downloadBtn').style.display = 'inline-block';
+                    
                     generatedClients.push(result.client);
                     updateClientsList();
                     
@@ -552,7 +562,7 @@
 ⏱️ Heartbeat: ${config.heartbeatInterval}ms
 📝 Output: ${config.outputName}.js${config.executable ? ' (+ .exe)' : ''}
 
-💾 Download: <a href="javascript:void(0)" onclick="downloadClient(\`${result.client.id}\`, \`${config.outputName}.js\`)">Click here to download</a>`;
+💾 Use the "💾 Download Last Client" button above to download`;
                     
                     showStatus('Client generated successfully!', 'success');
                 } else {
@@ -611,6 +621,18 @@
             }
 
             showStatus(`Batch generation complete: ${batchClients.length}/${count} successful`, 'success');
+        }
+
+        // Store last generated client info
+        let lastGeneratedClient = null;
+
+        // Download last generated client
+        function downloadLastClient() {
+            if (lastGeneratedClient) {
+                downloadClient(lastGeneratedClient.id, lastGeneratedClient.filename);
+            } else {
+                showStatus('No client generated yet', 'error');
+            }
         }
 
         // Generate client via Netlify function
